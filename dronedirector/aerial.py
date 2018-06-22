@@ -18,15 +18,16 @@ See Also:
 .. _ref: https://en.wikipedia.org/wiki/World_Geodetic_System
 """
 from __future__ import absolute_import
+import six
 from collections import namedtuple
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 
 Coordinates = namedtuple("Coordinates", ("altitude", "latitude", "longitude"))
 Cartesian = namedtuple("Cartesian", ("x", "y", "z"))
 
 
-class AbstractAerialObject(ABC):
+class AbstractAerialObject(six.with_metaclass(ABCMeta, object)):
     """
     Abstract base class for aerial objects.
 
@@ -82,7 +83,7 @@ class AbstractAerialObject(ABC):
         super(AbstractAerialObject, self).__init__()
 
 
-class Drone(Drone):
+class Drone(AbstractAerialObject):
     """
-
     """
+    pass
