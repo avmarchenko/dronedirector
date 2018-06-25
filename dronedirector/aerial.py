@@ -19,54 +19,39 @@ See Also:
 """
 from __future__ import absolute_import
 import six
+import uuid
+import types
+import numpy as np
+from datetime import datetime
+from itertools import cycle
 from collections import namedtuple
-from abc import ABCMeta, abstractmethod
 
 
+dtfmt = "%Y%m%d%H%M%S%f"
 Coordinates = namedtuple("Coordinates", ("altitude", "latitude", "longitude"))
 Cartesian = namedtuple("Cartesian", ("x", "y", "z"))
+Message = namedtuple("Message", Coordinates._fields + ("uid", "dronetime", "region"))
 
 
-class AbstractAerialObject(six.with_metaclass(ABCMeta, object)):
+class AerialObject(object):
     """
-    Abstract base class for aerial objects.
+    Base class for aerial objects.
 
     Aerial objects can be static or dynamic but must define something
     about their location (latitude, longitude) and how tall they are/how
     high up they fly. An example of a static aerial object (like a tree
-    or building) is given below. Functions should be generators and may
-    yield floating point or integer values.
+    or building) is given below. Note that :class:`~dronedirector.aerial.AerialObject`s
+    must at minimum define alitutde, latitude, and longitude.
 
     .. code:: Python
 
         class CaliRedwood(AbstractAerialObject):
             # Example of a completely static object
-            def alititude(self):
-                yield 100.0
-
-            def latitude(self):
-                yield 37.8716
-
-            def longitude(self):
-                yield -122.2727
-
-    An example of a flying object can be found below.
+            def __init__(self):
+                self.altitude = itertools.cycle([100.0])
+                self.latitude = itertools.cycle([37.8716])
+                self.longitude = itertools.cycle([-122.2727])
     """
-    @abstractmethod
-    def altitude(self):
-        """Generator that yields the current altitude of the object."""
-        pass
-
-    @abstractmethod
-    def latitude(self):
-        """Generator that yields current latitude of the object."""
-        pass
-
-    @abstractmethod
-    def longitude(self):
-        """Generator that yields current longitude of the object."""
-        pass
-
     @property
     def coordinates(self):
         """
@@ -79,11 +64,62 @@ class AbstractAerialObject(six.with_metaclass(ABCMeta, object)):
                            latitude=next(self.latitude),
                            longitude=next(self.longitude))
 
-    def __init__(self):
-        super(AbstractAerialObject, self).__init__()
+    def __init__(self, altitude, latitude, longitude):
+        if not all(isinstance(i, (types.GeneratorType, cycle)) for i in (altitude, latitude, longitude)):
+            raise TypeError("Altitude, latitude, and longitude must be generators")
+        self.altitude = altitude
+        self.latitude = latitude
+        self.longitude = longitude
 
 
-class Drone(AbstractAerialObject):
+class Drone(AerialObject):
     """
+    Base class for drones.
+
+    .. code:: Python
+
+        drone = Drone(altitude=itertools.cycle([1000.0]),
+                      latitude=itertools.cycle([41.0]),
+                      longitude=itertools.cycle(np.sin(np.arange(0, 2*np.pi, np.pi/(360*50)))),
+                      region="New York County")
+
+    Args:
+        altitude: Generator that yields altitude(s)
+        latitude: Generator that yields latitude(s)
+        longitude: Generator that yields longitude(s)
+        region: Region (coarse location) identifier
+        uid: Unique identifier
     """
-    pass
+    def message(self):
+        """Generate full message for the drone's current position."""
+        return Message(altitude=next(self.altitude),
+                       latitude=next(self.latitude),
+                       longitude=next(self.longitude),
+                       uid=self.uid.hex,
+                       region=self.region,
+                       dronetime=datetime.now().strftime(dtfmt))
+
+    def __init__(self, altitude, latitude, longitude, region, uid=None):
+        super(Drone, self).__init__(altitude, latitude, longitude)
+        self.uid = uuid.uuid4() if uid is None else uid
+        self.region = region
+
+
+class SinusoidalDrone(Drone):
+    """
+    A drone that circumnavigates the Earth sinusoidally at a given altitude
+    and latitude and with a given angular speed.
+
+    Args:
+        alt (float): Drone's constant altitude
+        lat (float): Drone's constant latitude
+        region: Region (coarse location) identifier
+        uid: Unique identifier
+        speed (float): Fraction of a (longitudinal) degree moved per second
+    """
+    def __init__(self, alt, lat, region, uid=None, speed=0.02):
+        altitude = cycle([alt])
+        latitude = cycle([lat])
+        longitude = cycle(np.sin(np.arange(0, 2*np.pi, np.pi/360*speed)))
+        super(SinusoidalDrone, self).__init__(altitude=altitude, latitude=latitude,
+                                              longitude=longitude, uid=uid, region=region)

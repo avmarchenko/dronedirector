@@ -57,7 +57,7 @@ drone_schema_str = """{
 
 
 def fly_drones(bootstrap_servers, schema_registry_url, producer_dict_kwargs=None,
-               topic_name="raw_drones", time_delay=0, *drones):
+               topic_name="drones_raw", time_delay=0, *drones):
     """
     A simple example of sending structured messages from drones to a message broker.
 
