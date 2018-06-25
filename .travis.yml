@@ -33,6 +33,7 @@ install:
     - source activate test
     - conda update -q --all
     - conda install -q -c conda-forge six numpy numba sphinx sphinx_rtd_theme ply pandoc pypandoc pytest pytest-cov coverage coveralls
+    - conda install -q -c ActivisionGameScience confluent-kafka
     - pip install travis-sphinx codacy-coverage
     - pip install .
 

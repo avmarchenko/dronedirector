@@ -45,12 +45,12 @@ class AerialObject(object):
 
     .. code:: Python
 
-        class CaliRedwood(AbstractAerialObject):
+        class CaliRedwood(AerialObject):
             # Example of a completely static object
             def __init__(self):
-                self.altitude = itertools.cycle([100.0])
-                self.latitude = itertools.cycle([37.8716])
-                self.longitude = itertools.cycle([-122.2727])
+                super(AerialObject, self).__init__(altitude=itertools.cycle([100.0]),
+                                                   latitude=itertools.cycle([37.8716]),
+                                                   longitude=itertools.cycle([-122.2727]))
     """
     @property
     def coordinates(self):
