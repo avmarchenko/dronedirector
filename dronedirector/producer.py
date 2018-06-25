@@ -29,34 +29,35 @@ drone_schema_str = """
     "type": "record",
     "fields": [
         {
-            "name": "uuid",
+            "name": "uid",
             "type": "string"
         },
         {
-            "name": "county",
+            "name": "region",
             "type": "string"
         },
         {
-            "name": "datetime",
+            "name": "dronetime",
             "type": "string"
+        },
         {
-            "name": "alt",
+            "name": "altitude",
             "type": "double"
         },
         {
-            "name": "lat",
+            "name": "latitude",
             "type": "double"
         },
         {
-            "name": "lon",
+            "name": "longitude",
             "type": "double"
         }
     ]
 }"""
 
 
-def fly_drones(bootstrap_servers, schema_registry_url, nmessages, default_value_schema_str=drone_schema_str,
-               producer_dict_kwargs=None, topic_name="drones_raw", time_delay=0, *drones):
+def fly_avro_drones(bootstrap_servers, schema_registry_url, nmessages, default_value_schema_str=drone_schema_str,
+               producer_dict_kwargs=None, topic_name="drones_raw", time_delay=0, drones=None):
     """
     A simple example of sending structured messages from drones to a message broker.
 
@@ -64,9 +65,11 @@ def fly_drones(bootstrap_servers, schema_registry_url, nmessages, default_value_
         bootstrap_servers (str): Comma separated string of Kafka servers
         schema_registry_url (str): Schema registry URL
         nmessages (int): Number of messages to send
+        default_value_schema_str (str): String Avro schema compatible with mdrone messages
         producer_dict_kwargs (dict): Optional keyword arguments for producer
         topic_name (str): Topic name to which drone messages will be sent
-        value_schema_str (str): Avro schema string for messages
+        time_delay (int): Delay time between cycles when producing messages
+        drones (iterable): Iterable of drones from which to generate messages
 
     Tip:
         Schemas should match the messages sent by drones.
@@ -75,15 +78,41 @@ def fly_drones(bootstrap_servers, schema_registry_url, nmessages, default_value_
            'schema.registry.url': schema_registry_url},
     if isinstance(producer_dict_kwargs, dict):
         pdk.update(producer_dict_kwargs)
-    producer = avro.AvroProducer({'bootstrap.servers': bootstrap_servers,
-                                  'schema.registry.url': schema_registry_url},
-                                 default_value_schema=avro.loads(default_value_schema_str))
+    producer = avro.AvroProducer(pdk, default_value_schema=avro.loads(default_value_schema_str))
     z = len(str(nmessages))            # Pretty print cycle number for logging
     for i in range(nmessages):
-        print("{}: ".format(str(i).zfill(z)))
+        print("====MESSAGE SET {}====".format(str(i).zfill(z)))
         for drone in drones:
             msg = drone.message()
             print(msg)
-            producer.produce(topic=topic_name, value={k: msg[k] for k in msg._fields})
+            producer.produce(topic=topic_name, value={k: getattr(msg, k) for k in msg._fields})
+        time.sleep(time_delay)
+    producer.flush()
+
+
+def fly_drones(bootstrap_servers, nmessages, producer_dict_kwargs=None,
+               topic_name="drones_raw", time_delay=0, drones=None):
+    """
+    A simple example of sending drones that send JSON messages to the message broker.
+
+    Args:
+        bootstrap_servers (str): Comma separated string of Kafka servers
+        nmessages (int): Number of messages to send
+        producer_dict_kwargs (dict): Optional keyword arguments for producer
+        topic_name (str): Topic name to which drone messages will be sent
+        time_delay (int): Delay time between cycles when producing messages
+        drones (iterable): Iterable of drones from which to generate messages
+    """
+    pdk = {'bootstrap.servers': bootstrap_servers}
+    if isinstance(producer_dict_kwargs, dict):
+        pdk.update(producer_dict_kwargs)
+    producer = ck.Producer(pdk)
+    z = len(str(nmessages))            # Pretty print cycle number for logging
+    for i in range(nmessages):
+        print("====MESSAGE SET {}====".format(str(i).zfill(z)))
+        for drone in drones:
+            msg = drone.message()
+            print(msg)
+            producer.produce(topic_name, str({k: getattr(msg, k) for k in msg._fields}))
         time.sleep(time_delay)
     producer.flush()
