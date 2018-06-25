@@ -79,21 +79,7 @@ def fly_drones(bootstrap_servers, schema_registry_url, producer_dict_kwargs=None
                              'schema.registry.url': schema_registry_url},
                              default_value_schema=avro.loads(value_schema_str))
     for drone in drones:
-        producer.produce(topic=topic_name, value=drone.message())
+        msg = drone.message()
+        producer.produce(topic=topic_name, value={k: msg[k] for k in msg._fields})
         time.sleep(time_delay)
-
     producer.flush()
-
-
-value_schema = avro.loads(value_schema_str)
-key_schema = avro.loads(key_schema_str)
-value = {"name": "Value"}
-key = {"name": "Key"}
-
-avroProducer = AvroProducer({
-'bootstrap.servers': '10.0.0.13',
-'schema.registry.url': 'http://10.0.0.13:8081'
-}, default_key_schema=key_schema, default_value_schema=value_schema)
-
-avroProducer.produce(topic='my_topic', value=value, key=key)
-avroProducer.flush()
