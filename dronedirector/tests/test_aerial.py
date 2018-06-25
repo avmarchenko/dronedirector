@@ -5,6 +5,7 @@
 Test Aerial Objects
 #####################
 """
+from itertools import cycle
 from dronedirector.aerial import AerialObject, Drone, SinusoidalDrone, Coordinates
 
 
