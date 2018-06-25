@@ -9,6 +9,7 @@ This module provides a simple interface for generating messages from
 about their location (altitude, latitude, longitude). An 
 Avro schema is provided for :class:`~dronedirector.aerial.Drone` messages.
 """
+from __future__ import print_function
 try:
     import confluent_kafka as ck
 except ImportError:
@@ -21,7 +22,8 @@ import time
 
 
 # value schema
-drone_schema_str = """{
+drone_schema_str = """
+{
     "namespace": "dronedirector.drones",
     "name": "drone",
     "type": "record",
@@ -36,10 +38,7 @@ drone_schema_str = """{
         },
         {
             "name": "datetime",
-            "type": {
-                "type": "long",
-                "logicalType": "timestamp-micros"
-            }
+            "type": "string"
         {
             "name": "alt",
             "type": "double"
@@ -56,30 +55,35 @@ drone_schema_str = """{
 }"""
 
 
-def fly_drones(bootstrap_servers, schema_registry_url, producer_dict_kwargs=None,
-               topic_name="drones_raw", time_delay=0, *drones):
+def fly_drones(bootstrap_servers, schema_registry_url, nmessages, default_value_schema_str=drone_schema_str,
+               producer_dict_kwargs=None, topic_name="drones_raw", time_delay=0, *drones):
     """
     A simple example of sending structured messages from drones to a message broker.
 
     Args:
         bootstrap_servers (str): Comma separated string of Kafka servers
         schema_registry_url (str): Schema registry URL
+        nmessages (int): Number of messages to send
+        producer_dict_kwargs (dict): Optional keyword arguments for producer
         topic_name (str): Topic name to which drone messages will be sent
         value_schema_str (str): Avro schema string for messages
 
-    Warning:
-        Changing the schema may require a custom definition of
-        :class:`~dronedirector.aerial.Drone`.
+    Tip:
+        Schemas should match the messages sent by drones.
     """
     pdk = {'bootstrap.servers': bootstrap_servers,
            'schema.registry.url': schema_registry_url},
     if isinstance(producer_dict_kwargs, dict):
         pdk.update(producer_dict_kwargs)
-    producer = AvroProducer({'bootstrap.servers': bootstrap_servers,
-                             'schema.registry.url': schema_registry_url},
-                             default_value_schema=avro.loads(value_schema_str))
-    for drone in drones:
-        msg = drone.message()
-        producer.produce(topic=topic_name, value={k: msg[k] for k in msg._fields})
+    producer = avro.AvroProducer({'bootstrap.servers': bootstrap_servers,
+                                  'schema.registry.url': schema_registry_url},
+                                 default_value_schema=avro.loads(default_value_schema_str))
+    z = len(str(nmessages))            # Pretty print cycle number for logging
+    for i in range(nmessages):
+        print("{}: ".format(str(i).zfill(z)))
+        for drone in drones:
+            msg = drone.message()
+            print(msg)
+            producer.produce(topic=topic_name, value={k: msg[k] for k in msg._fields})
         time.sleep(time_delay)
     producer.flush()
