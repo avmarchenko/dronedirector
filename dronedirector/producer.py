@@ -17,7 +17,7 @@ except ImportError:
 try:
     from confluent_kafka import avro
 except ImportError:
-    raise ImportError("Please install Avro to use this module")
+    print("Only the JSON producer is available -- use fly_drones")
 import time
 
 
@@ -113,6 +113,6 @@ def fly_drones(bootstrap_servers, nmessages, producer_dict_kwargs=None,
         for drone in drones:
             msg = drone.message()
             print(msg)
-            producer.produce(topic_name, str({k: getattr(msg, k) for k in msg._fields}))
+            producer.produce(topic_name, msg)
         time.sleep(time_delay)
     producer.flush()

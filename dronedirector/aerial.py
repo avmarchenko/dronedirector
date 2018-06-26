@@ -20,17 +20,14 @@ See Also:
 from __future__ import absolute_import
 import six
 import uuid
+import json
 import types
 import numpy as np
 from datetime import datetime
 from itertools import cycle
-from collections import namedtuple
 
 
 dtfmt = "%Y%m%d%H%M%S%f"
-Coordinates = namedtuple("Coordinates", ("altitude", "latitude", "longitude"))
-Cartesian = namedtuple("Cartesian", ("x", "y", "z"))
-Message = namedtuple("Message", Coordinates._fields + ("uid", "dronetime", "region"))
 
 
 class AerialObject(object):
@@ -52,17 +49,16 @@ class AerialObject(object):
                                                    latitude=itertools.cycle([37.8716]),
                                                    longitude=itertools.cycle([-122.2727]))
     """
-    @property
-    def coordinates(self):
+    def message(self):
         """
-        Get the current coordinates of the object.
+        Get the current coordinates of the object as a JSON message.
 
         Returns:
-            coords (:class:`~aerial.Coordinates`): Named tuple of altitude, latitude, longitude
+            text (str): JSON formatted message
         """
-        return Coordinates(altitude=next(self.altitude),
-                           latitude=next(self.latitude),
-                           longitude=next(self.longitude))
+        return json.dumps(dict(altitude=next(self.altitude),
+                               latitude=next(self.latitude),
+                               longitude=next(self.longitude)))
 
     def __init__(self, altitude, latitude, longitude):
         if not all(isinstance(i, (types.GeneratorType, cycle)) for i in (altitude, latitude, longitude)):
@@ -91,13 +87,18 @@ class Drone(AerialObject):
         uid: Unique identifier
     """
     def message(self):
-        """Generate full message for the drone's current position."""
-        return Message(altitude=next(self.altitude),
-                       latitude=next(self.latitude),
-                       longitude=next(self.longitude),
-                       uid=self.uid.hex,
-                       region=self.region,
-                       dronetime=datetime.now().strftime(dtfmt))
+        """
+        Get the current coordinates of the object as a JSON message.
+
+        Returns:
+            text (str): JSON formatted message
+        """
+        return json.dumps(dict(altitude=next(self.altitude),
+                               latitude=next(self.latitude),
+                               longitude=next(self.longitude),
+                               uid=self.uid.hex,
+                               region=self.region,
+                               dronetime=datetime.now().strftime(dtfmt)))
 
     def __init__(self, altitude, latitude, longitude, region, uid=None):
         super(Drone, self).__init__(altitude, latitude, longitude)
