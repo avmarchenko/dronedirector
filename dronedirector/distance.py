@@ -119,12 +119,13 @@ def compute_distances(xs, ys, zs):
     k = 0
     for i in range(n):
         for j in range(i+1, n):
-            dx = (x - xs[i])
-            dy = (y - ys[i])
-            dz = (z - zs[i])
+            dx = (xs[i] - xs[j])
+            dy = (ys[i] - ys[j])
+            dz = (zs[i] - zs[j])
             dr = np.sqrt(dx**2 + dy**2 + dz**2)
             dxyz[k, 0] = dx
             dxyz[k, 1] = dy
             dxyz[k, 2] = dz
             dxyz[k, 3] = dr
+            k += 1
     return dxyz

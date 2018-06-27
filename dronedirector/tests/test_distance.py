@@ -7,7 +7,7 @@ Tests for Distance Utilities
 """
 import pytest as pt
 import numpy as np
-from dronedirector.distance import (equatorial_radius, polar_radius,
+from dronedirector.distance import (equatorial_radius, polar_radius, compute_distances,
                                     earth_radius, lon_to_rad, lat_to_rad)
 
 
@@ -38,3 +38,14 @@ def test_earth_radius():
     assert np.isclose(earth_radius(1.570796326), polar_radius)
     assert np.isclose(earth_radius(0.0), equatorial_radius)
     assert np.isclose(earth_radius(-1.570796326), polar_radius)
+
+
+def test_compute_distance():
+    """Test for compute_distances"""
+    xs = [0, 1, 2]
+    ys = [3, 4, 5]
+    zs = [6, 7, 8]
+    dxyz = compute_distances(xs, ys, zs)
+    assert np.isclose(dxyz[0, 0], -1)
+    assert np.isclose(dxyz[2, 3], 1.7320508)
+    assert np.isclose(dxyz.sum(), -5.0717967)
