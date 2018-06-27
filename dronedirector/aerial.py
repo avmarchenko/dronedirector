@@ -45,9 +45,9 @@ class AerialObject(object):
         class CaliRedwood(AerialObject):
             # Example of a completely static object
             def __init__(self):
-                super(AerialObject, self).__init__(altitude=itertools.cycle([100.0]),
-                                                   latitude=itertools.cycle([37.8716]),
-                                                   longitude=itertools.cycle([-122.2727]))
+                super(CaliRedwood, self).__init__(altitude=itertools.cycle([100.0]),
+                                                  latitude=itertools.cycle([37.8716]),
+                                                  longitude=itertools.cycle([-122.2727]))
     """
     def message(self):
         """
