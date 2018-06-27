@@ -110,22 +110,21 @@ def compute_distances(xs, ys, zs):
     (x, y, z) and a collection of objects represented by arrays {xs}, {ys}, {zs}.
     
     Args:
-    x (float): Cartesian x coordinate of source object
-    y (float): Cartesian x coordinate of source object
-    z (float): Cartesian x coordinate of source object
     xs (array): Cartesian x coordinates of target objects
     ys (array): Cartesian y coordinates of target objects
     zs (array): Cartesian z coordinates of target objects
     """
     n = len(xs)
-    dxyz = np.empty((n, 4))
+    dxyz = np.empty((n*(n-1)//2, 4))
+    k = 0
     for i in range(n):
-        dx = (x - xs[i])
-        dy = (y - ys[i])
-        dz = (z - zs[i])
-        dr = np.sqrt(dx**2 + dy**2 + dz**2)
-        dxyz[i, 0] = dx
-        dxyz[i, 1] = dy
-        dxyz[i, 2] = dz
-        dxyz[i, 3] = dr
+        for j in range(i+1, n):
+            dx = (x - xs[i])
+            dy = (y - ys[i])
+            dz = (z - zs[i])
+            dr = np.sqrt(dx**2 + dy**2 + dz**2)
+            dxyz[k, 0] = dx
+            dxyz[k, 1] = dy
+            dxyz[k, 2] = dz
+            dxyz[k, 3] = dr
     return dxyz
