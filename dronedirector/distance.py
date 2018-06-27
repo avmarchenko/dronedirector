@@ -61,7 +61,7 @@ def lon_to_rad(degree):
     return degree*np.pi/180
 
     
-#@nb.jit(nopython=True, nogil=True)
+@nb.jit(nopython=True, nogil=True)
 def earth_radius(lat):
     """
     Compute the radius of the Earth for a given latitude.
