@@ -5,7 +5,7 @@
 Aerial Objects
 #################
 This module provides some simple classes that are used to simulate flying
-drones and other objects. The
+drones and other objects.
 
 Tip:
     Altitudes are expected in meters, latitudes and longitudes are expected
@@ -13,9 +13,7 @@ Tip:
     negative angles.
 
 See Also:
-    `World Geodetic System`_
-    
-.. _ref: https://en.wikipedia.org/wiki/World_Geodetic_System
+    https://en.wikipedia.org/wiki/World_Geodetic_System
 """
 from __future__ import absolute_import
 import six
@@ -37,8 +35,8 @@ class AerialObject(object):
     Aerial objects can be static or dynamic but must define something
     about their location (latitude, longitude) and how tall they are/how
     high up they fly. An example of a static aerial object (like a tree
-    or building) is given below. Note that :class:`~dronedirector.aerial.AerialObject`s
-    must at minimum define alitutde, latitude, and longitude.
+    or building) is given below. Note that at a minimum,altitude, latitude,
+    and longitude should be defined.
 
     .. code:: Python
 

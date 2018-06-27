@@ -14,9 +14,7 @@ Tip:
     negative angles.
 
 See Also:
-    `World Geodetic System`_
-    
-.. _ref: https://en.wikipedia.org/wiki/World_Geodetic_System
+    https://en.wikipedia.org/wiki/World_Geodetic_System
 """
 from __future__ import absolute_import, division
 import numpy as np

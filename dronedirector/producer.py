@@ -8,6 +8,8 @@ This module provides a simple interface for generating messages from
 :class:`~dronedirector.aerial.Drone`s
 about their location (altitude, latitude, longitude). An 
 Avro schema is provided for :class:`~dronedirector.aerial.Drone` messages.
+If a schema registry is not available, JSON messages can be sent using
+:func:`~dronedirector.producer.fly_drones`.
 """
 from __future__ import print_function
 try:
