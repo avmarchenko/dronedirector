@@ -1,0 +1,331 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dronedirector.aerial &mdash; dronedirector 0.0.7 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> dronedirector
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">dronedirector</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>dronedirector.aerial</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for dronedirector.aerial</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># Copyright 2018 Alex Marchenko</span>
+<span class="c1"># Distributed under the terms of the Apache License 2.0</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Aerial Objects</span>
+<span class="sd">#################</span>
+<span class="sd">This module provides some simple classes that are used to simulate flying</span>
+<span class="sd">drones and other objects.</span>
+
+<span class="sd">Tip:</span>
+<span class="sd">    Altitudes are expected in meters, latitudes and longitudes are expected</span>
+<span class="sd">    in degrees. By convention N and E are positive angles and S and W are</span>
+<span class="sd">    negative angles.</span>
+
+<span class="sd">See Also:</span>
+<span class="sd">    https://en.wikipedia.org/wiki/World_Geodetic_System</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">import</span> <span class="nn">six</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">cycle</span>
+
+
+<span class="n">dtfmt</span> <span class="o">=</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">%H%M%S</span><span class="si">%f</span><span class="s2">&quot;</span>
+
+
+<div class="viewcode-block" id="AerialObject"><a class="viewcode-back" href="../../api.html#dronedirector.aerial.AerialObject">[docs]</a><span class="k">class</span> <span class="nc">AerialObject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for aerial objects.</span>
+
+<span class="sd">    Aerial objects can be static or dynamic but must define something</span>
+<span class="sd">    about their location (latitude, longitude) and how tall they are/how</span>
+<span class="sd">    high up they fly. An example of a static aerial object (like a tree</span>
+<span class="sd">    or building) is given below. Note that at a minimum,altitude, latitude,</span>
+<span class="sd">    and longitude should be defined.</span>
+
+<span class="sd">    .. code:: Python</span>
+
+<span class="sd">        class CaliRedwood(AerialObject):</span>
+<span class="sd">            # Example of a completely static object</span>
+<span class="sd">            def __init__(self):</span>
+<span class="sd">                super(CaliRedwood, self).__init__(altitude=itertools.cycle([100.0]),</span>
+<span class="sd">                                                  latitude=itertools.cycle([37.8716]),</span>
+<span class="sd">                                                  longitude=itertools.cycle([-122.2727]))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AerialObject.message"><a class="viewcode-back" href="../../api.html#dronedirector.aerial.AerialObject.message">[docs]</a>    <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the current coordinates of the object as a JSON message.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            text (str): JSON formatted message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">altitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">),</span>
+                               <span class="n">latitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">),</span>
+                               <span class="n">longitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">)))</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">altitude</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">GeneratorType</span><span class="p">,</span> <span class="n">cycle</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">altitude</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Altitude, latitude, and longitude must be generators&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">altitude</span> <span class="o">=</span> <span class="n">altitude</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span> <span class="o">=</span> <span class="n">latitude</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">longitude</span> <span class="o">=</span> <span class="n">longitude</span></div>
+
+
+<div class="viewcode-block" id="Drone"><a class="viewcode-back" href="../../api.html#dronedirector.aerial.Drone">[docs]</a><span class="k">class</span> <span class="nc">Drone</span><span class="p">(</span><span class="n">AerialObject</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for drones.</span>
+
+<span class="sd">    .. code:: Python</span>
+
+<span class="sd">        drone = Drone(altitude=itertools.cycle([1000.0]),</span>
+<span class="sd">                      latitude=itertools.cycle([41.0]),</span>
+<span class="sd">                      longitude=itertools.cycle(np.sin(np.arange(0, 2*np.pi, np.pi/(360*50)))),</span>
+<span class="sd">                      region=&quot;New York County&quot;)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        altitude: Generator that yields altitude(s)</span>
+<span class="sd">        latitude: Generator that yields latitude(s)</span>
+<span class="sd">        longitude: Generator that yields longitude(s)</span>
+<span class="sd">        region: Region (coarse location) identifier</span>
+<span class="sd">        uid: Unique identifier</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Drone.message"><a class="viewcode-back" href="../../api.html#dronedirector.aerial.Drone.message">[docs]</a>    <span class="k">def</span> <span class="nf">message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the current coordinates of the object as a JSON message.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            text (str): JSON formatted message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">altitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">altitude</span><span class="p">),</span>
+                               <span class="n">latitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">),</span>
+                               <span class="n">longitude</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitude</span><span class="p">),</span>
+                               <span class="n">uid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">hex</span><span class="p">,</span>
+                               <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span>
+                               <span class="n">dronetime</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">dtfmt</span><span class="p">)))</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">altitude</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Drone</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">altitude</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span> <span class="k">if</span> <span class="n">uid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">uid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="o">=</span> <span class="n">region</span></div>
+
+
+<div class="viewcode-block" id="SinusoidalDrone"><a class="viewcode-back" href="../../api.html#dronedirector.aerial.SinusoidalDrone">[docs]</a><span class="k">class</span> <span class="nc">SinusoidalDrone</span><span class="p">(</span><span class="n">Drone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A drone that circumnavigates the Earth sinusoidally at a given altitude</span>
+<span class="sd">    and latitude and with a given angular speed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        alt (float): Drone&#39;s constant altitude</span>
+<span class="sd">        lat (float): Drone&#39;s constant latitude</span>
+<span class="sd">        region: Region (coarse location) identifier</span>
+<span class="sd">        uid: Unique identifier</span>
+<span class="sd">        speed (float): Fraction of a (longitudinal) degree moved per second</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">speed</span><span class="o">=</span><span class="mf">0.02</span><span class="p">):</span>
+        <span class="n">altitude</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="n">alt</span><span class="p">])</span>
+        <span class="n">latitude</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="n">lat</span><span class="p">])</span>
+        <span class="n">longitude</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">360</span><span class="o">*</span><span class="n">speed</span><span class="p">)))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SinusoidalDrone</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">altitude</span><span class="o">=</span><span class="n">altitude</span><span class="p">,</span> <span class="n">latitude</span><span class="o">=</span><span class="n">latitude</span><span class="p">,</span>
+                                              <span class="n">longitude</span><span class="o">=</span><span class="n">longitude</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="n">uid</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="n">region</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+      Last updated on Jul 04, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.0.7',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,327 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dronedirector.producer &mdash; dronedirector 0.0.7 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> dronedirector
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">dronedirector</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>dronedirector.producer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for dronedirector.producer</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># Copyright 2018 Alex Marchenko</span>
+<span class="c1"># Distributed under the terms of the Apache License 2.0</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Kafka Producer</span>
+<span class="sd">#################</span>
+<span class="sd">This module provides a simple interface for generating messages from</span>
+<span class="sd">:class:`~dronedirector.aerial.Drone`s</span>
+<span class="sd">about their location (altitude, latitude, longitude). An </span>
+<span class="sd">Avro schema is provided for :class:`~dronedirector.aerial.Drone` messages.</span>
+<span class="sd">If a schema registry is not available, JSON messages can be sent using</span>
+<span class="sd">:func:`~dronedirector.producer.fly_drones`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">confluent_kafka</span> <span class="k">as</span> <span class="nn">ck</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Confluent Kafka Python client not available&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">confluent_kafka</span> <span class="k">import</span> <span class="n">avro</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Only the JSON producer is available -- use fly_drones&quot;</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+
+<span class="c1"># value schema</span>
+<span class="n">drone_schema_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">{</span>
+<span class="s2">    &quot;namespace&quot;: &quot;dronedirector.drones&quot;,</span>
+<span class="s2">    &quot;name&quot;: &quot;drone&quot;,</span>
+<span class="s2">    &quot;type&quot;: &quot;record&quot;,</span>
+<span class="s2">    &quot;fields&quot;: [</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;uid&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;string&quot;</span>
+<span class="s2">        },</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;region&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;string&quot;</span>
+<span class="s2">        },</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;dronetime&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;string&quot;</span>
+<span class="s2">        },</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;altitude&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;double&quot;</span>
+<span class="s2">        },</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;latitude&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;double&quot;</span>
+<span class="s2">        },</span>
+<span class="s2">        {</span>
+<span class="s2">            &quot;name&quot;: &quot;longitude&quot;,</span>
+<span class="s2">            &quot;type&quot;: &quot;double&quot;</span>
+<span class="s2">        }</span>
+<span class="s2">    ]</span>
+<span class="s2">}&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="fly_avro_drones"><a class="viewcode-back" href="../../api.html#dronedirector.producer.fly_avro_drones">[docs]</a><span class="k">def</span> <span class="nf">fly_avro_drones</span><span class="p">(</span><span class="n">bootstrap_servers</span><span class="p">,</span> <span class="n">schema_registry_url</span><span class="p">,</span> <span class="n">nmessages</span><span class="p">,</span> <span class="n">default_value_schema_str</span><span class="o">=</span><span class="n">drone_schema_str</span><span class="p">,</span>
+               <span class="n">producer_dict_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">topic_name</span><span class="o">=</span><span class="s2">&quot;drones_raw&quot;</span><span class="p">,</span> <span class="n">time_delay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">drones</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple example of sending structured messages from drones to a message broker.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bootstrap_servers (str): Comma separated string of Kafka servers</span>
+<span class="sd">        schema_registry_url (str): Schema registry URL</span>
+<span class="sd">        nmessages (int): Number of messages to send</span>
+<span class="sd">        default_value_schema_str (str): String Avro schema compatible with mdrone messages</span>
+<span class="sd">        producer_dict_kwargs (dict): Optional keyword arguments for producer</span>
+<span class="sd">        topic_name (str): Topic name to which drone messages will be sent</span>
+<span class="sd">        time_delay (int): Delay time between cycles when producing messages</span>
+<span class="sd">        drones (iterable): Iterable of drones from which to generate messages</span>
+
+<span class="sd">    Tip:</span>
+<span class="sd">        Schemas should match the messages sent by drones.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pdk</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;bootstrap.servers&#39;</span><span class="p">:</span> <span class="n">bootstrap_servers</span><span class="p">,</span>
+           <span class="s1">&#39;schema.registry.url&#39;</span><span class="p">:</span> <span class="n">schema_registry_url</span><span class="p">},</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">producer_dict_kwargs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">pdk</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">producer_dict_kwargs</span><span class="p">)</span>
+    <span class="n">producer</span> <span class="o">=</span> <span class="n">avro</span><span class="o">.</span><span class="n">AvroProducer</span><span class="p">(</span><span class="n">pdk</span><span class="p">,</span> <span class="n">default_value_schema</span><span class="o">=</span><span class="n">avro</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">default_value_schema_str</span><span class="p">))</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">nmessages</span><span class="p">))</span>            <span class="c1"># Pretty print cycle number for logging</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nmessages</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;====MESSAGE SET </span><span class="si">{}</span><span class="s2">====&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="n">z</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">drone</span> <span class="ow">in</span> <span class="n">drones</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">drone</span><span class="o">.</span><span class="n">message</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">producer</span><span class="o">.</span><span class="n">produce</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="n">topic_name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">_fields</span><span class="p">})</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">time_delay</span><span class="p">)</span>
+    <span class="n">producer</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="fly_drones"><a class="viewcode-back" href="../../api.html#dronedirector.producer.fly_drones">[docs]</a><span class="k">def</span> <span class="nf">fly_drones</span><span class="p">(</span><span class="n">bootstrap_servers</span><span class="p">,</span> <span class="n">nmessages</span><span class="p">,</span> <span class="n">producer_dict_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">topic_name</span><span class="o">=</span><span class="s2">&quot;drones_raw&quot;</span><span class="p">,</span> <span class="n">time_delay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">drones</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple example of sending drones that send JSON messages to the message broker.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bootstrap_servers (str): Comma separated string of Kafka servers</span>
+<span class="sd">        nmessages (int): Number of messages to send</span>
+<span class="sd">        producer_dict_kwargs (dict): Optional keyword arguments for producer</span>
+<span class="sd">        topic_name (str): Topic name to which drone messages will be sent</span>
+<span class="sd">        time_delay (int): Delay time between cycles when producing messages</span>
+<span class="sd">        drones (iterable): Iterable of drones from which to generate messages</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pdk</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;bootstrap.servers&#39;</span><span class="p">:</span> <span class="n">bootstrap_servers</span><span class="p">}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">producer_dict_kwargs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">pdk</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">producer_dict_kwargs</span><span class="p">)</span>
+    <span class="n">producer</span> <span class="o">=</span> <span class="n">ck</span><span class="o">.</span><span class="n">Producer</span><span class="p">(</span><span class="n">pdk</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">nmessages</span><span class="p">))</span>            <span class="c1"># Pretty print cycle number for logging</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nmessages</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;====MESSAGE SET </span><span class="si">{}</span><span class="s2">====&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="n">z</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">drone</span> <span class="ow">in</span> <span class="n">drones</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">drone</span><span class="o">.</span><span class="n">message</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">producer</span><span class="o">.</span><span class="n">produce</span><span class="p">(</span><span class="n">topic_name</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">time_delay</span><span class="p">)</span>
+    <span class="n">producer</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+      Last updated on Jul 04, 2018.
+
+    </p>
+  </div> 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.0.7',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
